@@ -16,46 +16,74 @@ FOLDER_NAME_FORMATS = {
     "YYYY-MM": "%Y-%m",
     "Month-YYYY": "%B-%Y",
     "YYYY-MM-DD": "%Y-%m-%d",
-    "Day, DD Month YYYY": "%A, %d %B %Y"
+    # "Day, DD Month YYYY": "%A, %d %B %Y"
+}
+
+# Define accepted image and video file extensions
+image_video_extensions = {
+    # Image Extensions
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif',
+    '.webp', '.heif', '.heic',
+    # RAW Image Formats
+    '.cr2', '.crw', '.nef', '.nrw', '.orf', '.pef', '.raf', '.rw2', '.dng',
+    # Video Extensions
+    '.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.mpeg', '.mpg', '.webm'
 }
 
 # Function to sort and move files based on date modified/taken
-def sort_files_by_date(source_folder, destination_folder, folder_name_format, progress_callback, log_callback):
+def sort_files_by_date(source_folder, destination_folder, folder_name_format, progress_callback, log_callback, isQuick=False):
     global is_paused, is_cancelled
+    
+    # Log that we are starting the file counting process in a fixed line
+    log_callback("Counting total number of files...", replace_line=2)
 
-    # Define accepted image and video file extensions
-    image_video_extensions = {
-        # Image Extensions
-        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif',
-        '.webp', '.heif', '.heic', 
-        # RAW Image Formats
-        '.cr2', '.crw', '.nef', '.nrw', '.orf', '.pef', '.raf', '.rw2', '.dng', 
-        # Video Extensions
-        '.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.mpeg', '.mpg', '.webm'
-    }
+    total_files = 0
 
-    # Get a list of files only (excluding directories) with accepted extensions
-    total_files = sum(
-        1 for filename in os.listdir(source_folder)
-        if os.path.isfile(os.path.join(source_folder, filename)) and
-        (os.path.splitext(filename)[1].lower() in image_video_extensions)
-    )
+    # Start counting total files based on the isQuick flag
+    if isQuick:
+        # FAST way: Count all files (including folders) in the source folder
+        try:
+            total_files = len(os.listdir(source_folder))  # Just a quick count
+        except Exception as e:
+            log_callback(f"Error accessing source folder: {e}")
+            return
+        
+        # Log the final total file count in place
+        log_callback(f"Total number of files: {total_files}", replace_line=2)
+        
+    else:
+        # SLOW way: Count only image and video files
+        for filename in os.listdir(source_folder):
+            # Check for cancellation after every file check
+            if is_cancelled:
+                # log_callback("Cancelling process...")
+                log_callback("Process cancelled by the user.")
+                start_button.config(state=tk.NORMAL)
+                return
+            
+            file_path = os.path.join(source_folder, filename)
+            if os.path.isfile(file_path) and (os.path.splitext(filename)[1].lower() in image_video_extensions):
+                total_files += 1
+                # Update the total files log on line 2
+                log_callback(f"Counting files... Total so far: {total_files}", replace_line=2)
 
+        # Log the final total file count in place
+        log_callback(f"Total number of files: {total_files}", replace_line=2)
 
-    # total_files = len(os.listdir(source_folder))
     processed_files = 0
 
     for filename in os.listdir(source_folder):
         # Check for cancellation at the beginning of each iteration
         if is_cancelled:
+            # log_callback("Cancelling process...")
             log_callback("Process cancelled by the user.")
             start_button.config(state=tk.NORMAL)
             return
 
         file_path = os.path.join(source_folder, filename)
 
-        # Skip directories
-        if os.path.isdir(file_path):
+        # Skip directories and non-supported files
+        if os.path.isdir(file_path) or (os.path.splitext(filename)[1].lower() not in image_video_extensions):
             continue
 
         try:
@@ -77,6 +105,7 @@ def sort_files_by_date(source_folder, destination_folder, folder_name_format, pr
 
             # Check for cancellation immediately after moving the file
             if is_cancelled:
+                log_callback("Cancelling process...")
                 log_callback("Process cancelled by the user.")
                 start_button.config(state=tk.NORMAL)
                 return
@@ -103,9 +132,15 @@ def update_progress(progress):
     progress_var.set(progress)
 
 # Function to log messages
-def log_message(message):
-    log_text.insert(tk.END, f"{message}\n")
-    log_text.see(tk.END)  # Scroll to the end
+def log_message(message, replace_line=None):
+    if replace_line is not None:
+        # Replace the content of a specific line (1-based index)
+        log_text.delete(f"{replace_line}.0", f"{replace_line}.end")
+        log_text.insert(f"{replace_line}.0", f"{message}\n")
+    else:
+        # Default behavior: Append the message to the log
+        log_text.insert(tk.END, f"{message}\n")
+        log_text.see(tk.END)  # Scroll to the end
 
 # Helper function to browse and set folder path
 def browse_directory(entry_widget):
@@ -165,7 +200,6 @@ def cancel_sorting():
     if messagebox.askyesno("Confirm Cancel", "Are you sure you want to cancel the sorting process?"):
         is_cancelled = True
         log_message("Cancelling process...")
-
 
 # Function to reset the UI for a new sort
 def reset_for_new_sort():
