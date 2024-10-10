@@ -220,7 +220,7 @@ def reset_for_new_sort():
 # Create the UI window
 app = tk.Tk()
 app.title("Photo Sorter")
-app.iconphoto(False, tk.PhotoImage(file="appicon.png"))  # Set custom icon for the window
+# app.iconphoto(False, tk.PhotoImage(file="appicon.png"))  # Set custom icon for the window
 
 # Set minimum window size to 600px wide and 400px tall
 app.minsize(600, 400)

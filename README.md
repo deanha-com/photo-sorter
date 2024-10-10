@@ -68,6 +68,7 @@ To create a standalone executable of the application, you can use PyInstaller.
 
     ```bash
     `pyinstaller --onefile --windowed photo_sorter_ui.py`
+    `pyinstaller --onefile --windowed --add-data "appicon.png;." --workpath ./build photo_sorter_ui.py`
     ```
 
 - `--onefile` creates a single executable file.
