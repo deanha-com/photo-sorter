@@ -10,6 +10,7 @@ import time
 # Global control flags
 is_paused = False
 is_cancelled = False
+is_quick_mode = False  # New variable to track quick mode
 
 # Predefined folder name formats for the dropdown
 FOLDER_NAME_FORMATS = {
@@ -56,7 +57,6 @@ def sort_files_by_date(source_folder, destination_folder, folder_name_format, pr
         for filename in os.listdir(source_folder):
             # Check for cancellation after every file check
             if is_cancelled:
-                # log_callback("Cancelling process...")
                 log_callback("Process cancelled by the user.")
                 start_button.config(state=tk.NORMAL)
                 return
@@ -75,7 +75,6 @@ def sort_files_by_date(source_folder, destination_folder, folder_name_format, pr
     for filename in os.listdir(source_folder):
         # Check for cancellation at the beginning of each iteration
         if is_cancelled:
-            # log_callback("Cancelling process...")
             log_callback("Process cancelled by the user.")
             start_button.config(state=tk.NORMAL)
             return
@@ -158,13 +157,16 @@ def update_example_label(*args):
 
 # Function to start sorting when user clicks the button
 def start_sorting():
-    global is_paused, is_cancelled
+    global is_paused, is_cancelled  # Removed is_quick_mode from here
     is_paused = False
     is_cancelled = False
 
     source_folder = source_entry.get()
     destination_folder = destination_entry.get()
     folder_name_format = FOLDER_NAME_FORMATS[folder_format_var.get()]
+
+    # Get quick mode state directly from the checkbox
+    is_quick_mode = quick_mode_var.get()  # Read the current value of the checkbox
 
     # Validate input
     if not os.path.isdir(source_folder):
@@ -180,8 +182,8 @@ def start_sorting():
     progress_var.set(0)
     log_text.delete(1.0, tk.END)  # Clear previous logs
 
-    # Start sorting in a new thread
-    threading.Thread(target=sort_files_by_date, args=(source_folder, destination_folder, folder_name_format, update_progress, log_message), daemon=True).start()
+    # Start sorting in a new thread, passing the quick mode option
+    threading.Thread(target=sort_files_by_date, args=(source_folder, destination_folder, folder_name_format, update_progress, log_message, is_quick_mode), daemon=True).start()
 
 # Function to pause/resume sorting
 def toggle_pause():
@@ -203,6 +205,8 @@ def cancel_sorting():
 
 # Function to reset the UI for a new sort
 def reset_for_new_sort():
+    global is_quick_mode  # Reset the quick mode
+    is_quick_mode = False  # Reset quick mode to unchecked
     # Clear all input fields
     source_entry.delete(0, tk.END)
     destination_entry.delete(0, tk.END)
@@ -252,6 +256,11 @@ folder_format_dropdown.bind("<<ComboboxSelected>>", update_example_label)  # Upd
 # Example Folder Name Label
 example_label = tk.Label(app, text="Example: YYYY-MM")
 example_label.grid(row=2, column=2, padx=10, pady=10, sticky="w")
+
+# Quick Mode Checkbox
+quick_mode_var = tk.BooleanVar()
+quick_mode_checkbox = tk.Checkbutton(app, text="Quick Mode", variable=quick_mode_var)
+quick_mode_checkbox.grid(row=4, column=0, columnspan=4, padx=30, pady=10)
 
 # Start Sorting Button
 start_button = tk.Button(app, text="Start Sorting", command=start_sorting, width=20)
