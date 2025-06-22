@@ -27,7 +27,7 @@ image_video_extensions = {
     '.webp', '.heif', '.heic',
     # RAW Image Formats
     '.raf', '.cr2', '.rw2', '.erf', '.nrw', '.nef', '.rwz', '.dng', '.arw', '.eip', '.bay', '.dcr', '.gpr', '.raw', '.crw', '.3fr', '.sr2', '.k25', '.dng', '.mef', '.kc2', '.cs1', '.mos', '.orf', '.kdc', '.cr3', '.srf', '.srw', '.j6i', '.ari', '.fff', '.mrw', '.mfw', '.rwl', '.x3f', '.pef', '.iiq', '.cxi', '.nksc',
-    # Video Extensions    # Video Extensions
+    # Video Extensions
     '.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.mpeg', '.mpg', '.webm'
 }
 
@@ -58,7 +58,7 @@ def sort_files_by_date(source_folder, destination_folder, folder_name_format, pr
             # Check for cancellation after every file check
             if is_cancelled:
                 log_callback("Process cancelled by the user.")
-                start_button.config(state=tk.NORMAL)
+                reset_ui_for_new_sort()
                 return
             
             file_path = os.path.join(source_folder, filename)
@@ -76,7 +76,7 @@ def sort_files_by_date(source_folder, destination_folder, folder_name_format, pr
         # Check for cancellation at the beginning of each iteration
         if is_cancelled:
             log_callback("Process cancelled by the user.")
-            start_button.config(state=tk.NORMAL)
+            reset_ui_for_new_sort()
             return
 
         file_path = os.path.join(source_folder, filename)
@@ -104,9 +104,8 @@ def sort_files_by_date(source_folder, destination_folder, folder_name_format, pr
 
             # Check for cancellation immediately after moving the file
             if is_cancelled:
-                log_callback("Cancelling process...")
                 log_callback("Process cancelled by the user.")
-                start_button.config(state=tk.NORMAL)
+                reset_ui_for_new_sort()
                 return
 
         except Exception as e:
@@ -124,7 +123,7 @@ def sort_files_by_date(source_folder, destination_folder, folder_name_format, pr
         time.sleep(0.1)  # Simulate processing time for demonstration
 
     log_callback("Sorting complete!")
-    start_button.config(state=tk.NORMAL)
+    reset_ui_for_new_sort()
 
 # Function to update progress bar
 def update_progress(progress):
@@ -155,6 +154,28 @@ def update_example_label(*args):
     example_folder_name = current_date.strftime(folder_format)
     example_label.config(text=f"Example: {example_folder_name}")
 
+# Function to reset UI for new sort
+def reset_ui_for_new_sort():
+    global is_paused, is_cancelled, is_quick_mode
+    is_paused = False
+    is_cancelled = False
+    is_quick_mode = False
+
+    # Reset buttons
+    start_button.grid()  # Show start button
+    cancel_button.grid_remove()  # Hide cancel button
+    pause_button.grid_remove()  # Hide pause button
+    pause_button.config(text="Pause")  # Reset pause button text to "Pause"
+
+    # Re-enable Start button
+    start_button.config(state=tk.NORMAL)
+
+    # Reset log, progress, and inputs
+    progress_var.set(0)
+    log_text.delete(1.0, tk.END)  # Clear log
+    source_entry.delete(0, tk.END)
+    destination_entry.delete(0, tk.END)
+
 # Function to start sorting when user clicks the button
 def start_sorting():
     global is_paused, is_cancelled  # Removed is_quick_mode from here
@@ -177,8 +198,12 @@ def start_sorting():
         messagebox.showerror("Error", "Invalid destination folder.")
         return
 
+    # Hide start button, show cancel and pause buttons
+    start_button.grid_remove()  # Hide start button
+    cancel_button.grid()  # Show cancel button
+    pause_button.grid()  # Show pause button
+
     # Disable start button and reset progress
-    start_button.config(state=tk.DISABLED)
     progress_var.set(0)
     log_text.delete(1.0, tk.END)  # Clear previous logs
 
@@ -203,28 +228,9 @@ def cancel_sorting():
         is_cancelled = True
         log_message("Cancelling process...")
 
-# Function to reset the UI for a new sort
-def reset_for_new_sort():
-    global is_quick_mode  # Reset the quick mode
-    is_quick_mode = False  # Reset quick mode to unchecked
-    # Clear all input fields
-    source_entry.delete(0, tk.END)
-    destination_entry.delete(0, tk.END)
-
-    # Reset the dropdown to the default value
-    folder_format_var.set("YYYY-MM")
-
-    # Clear progress bar and logs
-    progress_var.set(0)
-    log_text.delete(1.0, tk.END)
-
-    # Re-enable the "Start Sorting" button
-    start_button.config(state=tk.NORMAL)
-
 # Create the UI window
 app = tk.Tk()
 app.title("Photo Sorter")
-# app.iconphoto(False, tk.PhotoImage(file="appicon.png"))  # Set custom icon for the window
 
 # Set minimum window size to 600px wide and 400px tall
 app.minsize(600, 400)
@@ -234,53 +240,53 @@ progress_var = tk.DoubleVar()
 progress_bar = ttk.Progressbar(app, maximum=100, variable=progress_var)
 progress_bar.grid(row=5, column=0, columnspan=4, padx=30, pady=10, sticky="ew")  # Full-width with padding
 
-# Source Folder Input
-tk.Label(app, text="Source Folder:").grid(row=0, column=0, padx=30, pady=10, sticky="w")
+# Folder Input: Source
+tk.Label(app, text="Source Folder:").grid(row=0, column=0, padx=10, pady=10, sticky="e")
 source_entry = tk.Entry(app, width=50)
-source_entry.grid(row=0, column=1, padx=10, sticky="ew")
-tk.Button(app, text="Browse", command=lambda: browse_directory(source_entry)).grid(row=0, column=2, padx=10, pady=10)
+source_entry.grid(row=0, column=1, padx=10, pady=10)
+source_browse_button = tk.Button(app, text="Browse", command=lambda: browse_directory(source_entry))
+source_browse_button.grid(row=0, column=2, padx=10, pady=10)
 
-# Destination Folder Input
-tk.Label(app, text="Destination Folder:").grid(row=1, column=0, padx=30, pady=10, sticky="w")
+# Folder Input: Destination
+tk.Label(app, text="Destination Folder:").grid(row=1, column=0, padx=10, pady=10, sticky="e")
 destination_entry = tk.Entry(app, width=50)
-destination_entry.grid(row=1, column=1, padx=10, sticky="ew")
-tk.Button(app, text="Browse", command=lambda: browse_directory(destination_entry)).grid(row=1, column=2, padx=10, pady=10)
+destination_entry.grid(row=1, column=1, padx=10, pady=10)
+destination_browse_button = tk.Button(app, text="Browse", command=lambda: browse_directory(destination_entry))
+destination_browse_button.grid(row=1, column=2, padx=10, pady=10)
 
-# Folder Name Format Dropdown
-tk.Label(app, text="Folder Name Format:").grid(row=2, column=0, padx=30, pady=10, sticky="w")
+# Dropdown for Folder Format
+tk.Label(app, text="Folder Name Format:").grid(row=2, column=0, padx=10, pady=10, sticky="e")
 folder_format_var = tk.StringVar(value="YYYY-MM")
-folder_format_dropdown = ttk.Combobox(app, textvariable=folder_format_var, values=list(FOLDER_NAME_FORMATS.keys()), state="readonly")
-folder_format_dropdown.grid(row=2, column=1, padx=10, sticky="ew")
-folder_format_dropdown.bind("<<ComboboxSelected>>", update_example_label)  # Update example on selection change
+folder_format_menu = tk.OptionMenu(app, folder_format_var, *FOLDER_NAME_FORMATS.keys())
+folder_format_menu.grid(row=2, column=1, padx=10, pady=10)
 
-# Example Folder Name Label
-example_label = tk.Label(app, text="Example: YYYY-MM")
-example_label.grid(row=2, column=2, padx=10, pady=10, sticky="w")
+# Bind update_example_label to the folder format dropdown
+folder_format_var.trace_add('write', update_example_label)
+
+# Example folder name label
+example_label = tk.Label(app, text="Example: ")
+example_label.grid(row=2, column=2, padx=10, pady=10)
 
 # Quick Mode Checkbox
 quick_mode_var = tk.BooleanVar()
-quick_mode_checkbox = tk.Checkbutton(app, text="Quick Mode", variable=quick_mode_var)
-quick_mode_checkbox.grid(row=4, column=0, columnspan=4, padx=30, pady=10)
+quick_mode_checkbox = tk.Checkbutton(app, text="Enable Quick Mode", variable=quick_mode_var)
+quick_mode_checkbox.grid(row=3, column=0, padx=10, pady=10, sticky="w")
 
-# Start Sorting Button
-start_button = tk.Button(app, text="Start Sorting", command=start_sorting, width=20)
-start_button.grid(row=3, column=0, padx=30, pady=10)
+# Log Output (Text Widget)
+log_text = tk.Text(app, height=10, width=80)
+log_text.grid(row=6, column=0, columnspan=4, padx=10, pady=10)
 
-# New Sort Button
-new_sort_button = tk.Button(app, text="New Sort", command=reset_for_new_sort, width=20)
-new_sort_button.grid(row=3, column=1, padx=10, pady=10)
+# Buttons (Start, Pause, Cancel)
+start_button = tk.Button(app, text="Start Sorting", command=start_sorting)
+start_button.grid(row=7, column=1, padx=10, pady=10)
 
-# Pause/Resume Button
-pause_button = tk.Button(app, text="Pause", command=toggle_pause, width=20)
-pause_button.grid(row=3, column=2, padx=10, pady=10)
+pause_button = tk.Button(app, text="Pause", command=toggle_pause)
+pause_button.grid(row=7, column=2, padx=10, pady=10)
+pause_button.grid_remove()  # Hide initially
 
-# Cancel Button
-cancel_button = tk.Button(app, text="Cancel", command=cancel_sorting, width=20)
-cancel_button.grid(row=3, column=3, padx=10, pady=10)
+cancel_button = tk.Button(app, text="Cancel", command=cancel_sorting)
+cancel_button.grid(row=7, column=3, padx=10, pady=10)
+cancel_button.grid_remove()  # Hide initially
 
-# Log Messages Text Box
-log_text = tk.Text(app, width=80, height=10, state=tk.NORMAL)
-log_text.grid(row=6, column=0, columnspan=4, padx=30, pady=10, sticky="ew")
-
-# Run the application
+# Start the UI loop
 app.mainloop()

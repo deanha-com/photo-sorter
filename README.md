@@ -30,6 +30,8 @@ These libraries are part of the Python standard library, so you typically won't 
 
    ```bash
    pip install --upgrade pip
+   pip install flet Pillow hachoir
+
    ```
 
 ## Running the Script {#running-the-script}
@@ -69,6 +71,7 @@ To create a standalone executable of the application, you can use PyInstaller.
     ```bash
     `pyinstaller --onefile --windowed photo_sorter_ui.py`
     `pyinstaller --onefile --windowed --add-data "appicon.png;." --workpath ./build photo_sorter_ui.py`
+    `pyinstaller --noconfirm --onefile --windowed photo_sorter_v_2_flet.py`
     ```
 
 - `--onefile` creates a single executable file.
